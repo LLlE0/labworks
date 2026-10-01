@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="h3 mb-3">Доверенные сети</h1>
+<form class="row g-2 section mb-4" method="post">
+  <div class="col-md-3">
+    <select class="form-select" name="building_id">
+      {% for building in buildings %}<option value="{{ building.id }}">{{ building.name }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3"><input class="form-control" name="ssid" placeholder="SSID" required></div>
+  <div class="col-md-3"><input class="form-control" name="bssid" placeholder="AA:BB:CC:DD:EE:FF" required></div>
+  <div class="col-md-2">
+    <select class="form-select" name="encryption_type"><option>WPA2</option><option>WPA3</option><option>OPEN</option></select>
+  </div>
+  <div class="col-md-1"><button class="btn btn-info w-100">+</button></div>
+</form>
+<div class="section table-responsive">
+  <table class="table align-middle">
+    <thead><tr><th>Здание</th><th>SSID</th><th>BSSID</th><th>Шифрование</th></tr></thead>
+    <tbody>
+      {% for network in networks %}
+        <tr><td>{{ network.building.name }}</td><td>{{ network.ssid }}</td><td><code>{{ network.bssid }}</code></td><td>{{ network.encryption_type }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

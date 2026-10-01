@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="h3 mb-3">Журнал угроз</h1>
+<div class="section table-responsive">
+  <table class="table align-middle">
+    <thead><tr><th>Тип</th><th>Критичность</th><th>Здание</th><th>SSID</th><th>BSSID</th><th>Статус</th></tr></thead>
+    <tbody>
+      {% for threat in threats %}
+        <tr>
+          <td>{{ threat.threat_type }}</td><td><span class="badge text-bg-danger">{{ threat.severity }}</span></td><td>{{ threat.building.name }}</td>
+          <td>{{ threat.scan_result.ssid }}</td><td><code>{{ threat.scan_result.bssid }}</code></td>
+          <td>
+            <form class="d-flex gap-2" method="post">
+              <input type="hidden" name="threat_id" value="{{ threat.id }}">
+              <select class="form-select form-select-sm" name="status">
+                {% for status in ["new", "confirmed", "resolved"] %}
+                  <option value="{{ status }}" {% if threat.status == status %}selected{% endif %}>{{ status }}</option>
+                {% endfor %}
+              </select>
+              <button class="btn btn-outline-info btn-sm">OK</button>
+            </form>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6" class="text-secondary">Угрозы не зарегистрированы</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

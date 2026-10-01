@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="h3 mb-3">Проводной интерфейс ESP8266</h1>
+<div class="section mb-4">
+  <form method="post" class="row g-3 align-items-end">
+    <div class="col-md-6">
+      <label class="form-label">TTY-порт MicroUSB</label>
+      <input class="form-control" name="serial_port" value="{{ serial_port }}" placeholder="/dev/ttyUSB0" required>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Скорость</label>
+      <input class="form-control" name="serial_baudrate" value="{{ serial_baudrate }}" inputmode="numeric" required>
+    </div>
+    <div class="col-md-3">
+      <button class="btn btn-info w-100" type="submit">Сохранить</button>
+    </div>
+  </form>
+</div>
+
+<div class="section">
+  <h2 class="h5">Текущая схема передачи</h2>
+  <div class="text-secondary mb-3">ESP8266 подключена к ноутбуку по MicroUSB. Прошивка пишет JSON в USB Serial, gateway читает выбранный TTY и отправляет данные в backend.</div>
+  <div class="row g-3">
+    <div class="col-md-4"><div class="metric"><div class="metric-label">Источник</div><div class="fw-semibold">ESP8266 Serial</div></div></div>
+    <div class="col-md-4"><div class="metric"><div class="metric-label">Порт</div><div class="fw-semibold"><code>{{ serial_port }}</code></div></div></div>
+    <div class="col-md-4"><div class="metric"><div class="metric-label">API</div><div class="fw-semibold"><code>/api/scan</code></div></div></div>
+  </div>
+</div>
+{% endblock %}

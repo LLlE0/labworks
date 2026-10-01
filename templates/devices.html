@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="h3 mb-3">ESP-устройства</h1>
+<form class="row g-2 section mb-4" method="post">
+  <div class="col-md-3"><input class="form-control" name="device_id" placeholder="ESP8266-DEMO-001" required></div>
+  <div class="col-md-3">
+    <select class="form-select" name="building_id">
+      {% for building in buildings %}<option value="{{ building.id }}">{{ building.name }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3"><input class="form-control" name="firmware_version" value="esp8266-1.0"></div>
+  <div class="col-md-2 form-check form-switch pt-2"><input class="form-check-input" type="checkbox" name="is_online"> <label class="form-check-label">online</label></div>
+  <div class="col-md-1"><button class="btn btn-info w-100">+</button></div>
+</form>
+<div class="section table-responsive">
+  <table class="table align-middle">
+    <thead><tr><th>ID устройства</th><th>Здание</th><th>Прошивка</th><th>Статус</th></tr></thead>
+    <tbody>
+      {% for device in devices %}
+        <tr>
+          <td><code>{{ device.device_id }}</code></td><td>{{ device.building.name }}</td><td>{{ device.firmware_version }}</td>
+          <td><span class="badge {{ 'text-bg-success' if device.is_online else 'text-bg-secondary' }}">{{ 'online' if device.is_online else 'offline' }}</span></td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

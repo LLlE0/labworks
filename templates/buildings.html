@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="h3 mb-3">Здания</h1>
+<form class="row g-2 section mb-4" method="post">
+  <div class="col-md-3"><input class="form-control" name="name" placeholder="Название" required></div>
+  <div class="col-md-4"><input class="form-control" name="address" placeholder="Адрес"></div>
+  <div class="col-md-4"><input class="form-control" name="description" placeholder="Описание"></div>
+  <div class="col-md-1"><button class="btn btn-info w-100">+</button></div>
+</form>
+<div class="section table-responsive">
+  <table class="table align-middle">
+    <thead><tr><th>Название</th><th>Адрес</th><th>Описание</th><th></th></tr></thead>
+    <tbody>
+      {% for building in buildings %}
+        <tr>
+          <td>{{ building.name }}</td><td>{{ building.address }}</td><td>{{ building.description }}</td>
+          <td class="text-end">
+            <form method="post" action="{{ url_for('delete_building', building_id=building.id) }}">
+              <button class="btn btn-outline-danger btn-sm">Удалить</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,65 @@
+body {
+  background: #f5f7fb;
+  color: #152033;
+}
+
+.section,
+.metric,
+.login-panel {
+  background: #fff;
+  border: 1px solid #dde5ef;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(21, 32, 51, 0.06);
+  padding: 18px;
+}
+
+.login-shell {
+  min-height: calc(100vh - 120px);
+  display: grid;
+  place-items: center;
+}
+
+.login-panel {
+  width: min(420px, 100%);
+}
+
+.metric-value {
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.metric-label {
+  color: #667085;
+}
+
+.threat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid #edf1f6;
+}
+
+.threat-row:last-child {
+  border-bottom: 0;
+}
+
+.threat-safe {
+  background: #d1fadf;
+  color: #05603a;
+}
+
+.threat-warning {
+  background: #fef0c7;
+  color: #93370d;
+}
+
+.threat-critical {
+  background: #fee4e2;
+  color: #b42318;
+}
+
+code {
+  color: #0f766e;
+}

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1 class="h3 mb-1">Сводка безопасности</h1>
+    <div class="text-secondary">Последние результаты сканирования и активные угрозы</div>
+  </div>
+  <span class="badge text-bg-info">Backend rendering</span>
+</div>
+
+<div class="row g-3 mb-4">
+  {% for label, value in [("Здания", stats.buildings), ("ESP-устройства", stats.devices), ("Доверенные сети", stats.trusted), ("Активные угрозы", stats.threats)] %}
+    <div class="col-6 col-lg-3">
+      <div class="metric">
+        <div class="metric-value">{{ value }}</div>
+        <div class="metric-label">{{ label }}</div>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="section">
+      <h2 class="h5">Последние сети</h2>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead><tr><th>SSID</th><th>BSSID</th><th>RSSI</th><th>Статус</th></tr></thead>
+          <tbody>
+            {% for item in latest_results %}
+              <tr>
+                <td>{{ item.ssid }}</td>
+                <td><code>{{ item.bssid }}</code></td>
+                <td>{{ item.rssi }} dBm</td>
+                <td><span class="badge threat-{{ item.threat_level|lower }}">{{ item.threat_level }}</span></td>
+              </tr>
+            {% else %}
+              <tr><td colspan="4" class="text-secondary">Данных сканирования пока нет</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="section">
+      <h2 class="h5">Угрозы</h2>
+      {% for threat in threats %}
+        <div class="threat-row">
+          <div>
+            <div class="fw-semibold">{{ threat.threat_type }}</div>
+            <div class="text-secondary small">{{ threat.building.name }} · {{ threat.scan_result.ssid }}</div>
+          </div>
+          <span class="badge text-bg-danger">{{ threat.severity }}</span>
+        </div>
+      {% else %}
+        <div class="text-secondary">Новых угроз нет</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

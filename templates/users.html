@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="h3 mb-3">Пользователи</h1>
+<form class="row g-2 section mb-4" method="post">
+  <div class="col-md-2"><input class="form-control" name="username" placeholder="Логин" required></div>
+  <div class="col-md-2"><input class="form-control" type="password" name="password" placeholder="Пароль" required></div>
+  <div class="col-md-3"><input class="form-control" type="email" name="email" placeholder="email"></div>
+  <div class="col-md-2"><select class="form-select" name="role"><option>administrator</option><option>operator</option><option>viewer</option></select></div>
+  <div class="col-md-2 form-check form-switch pt-2"><input class="form-check-input" type="checkbox" name="is_active" checked> <label class="form-check-label">active</label></div>
+  <div class="col-md-1"><button class="btn btn-info w-100">+</button></div>
+</form>
+<div class="section table-responsive">
+  <table class="table align-middle">
+    <thead><tr><th>Логин</th><th>Email</th><th>Роль</th><th>Активен</th></tr></thead>
+    <tbody>
+      {% for user in users %}
+        <tr><td>{{ user.username }}</td><td>{{ user.email }}</td><td>{{ user.role }}</td><td>{{ 'да' if user.is_active else 'нет' }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

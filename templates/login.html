@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="login-shell">
+  <div class="login-panel">
+    <h1 class="h3 mb-2">Панель администратора</h1>
+    <p class="text-secondary mb-4">Мониторинг Wi-Fi-окружения и MITM-угроз</p>
+    <form method="post">
+      <div class="mb-3">
+        <label class="form-label">Логин</label>
+        <input class="form-control" name="username" value="admin" required>
+      </div>
+      <div class="mb-4">
+        <label class="form-label">Пароль</label>
+        <input class="form-control" type="password" name="password" value="admin" required>
+      </div>
+      <button class="btn btn-info w-100" type="submit">Войти</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
