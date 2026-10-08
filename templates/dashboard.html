@@ -3,7 +3,14 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
     <h1 class="h3 mb-1">Сводка безопасности</h1>
-    <div class="text-secondary">Последние результаты сканирования и активные угрозы</div>
+    <div class="text-secondary">
+      Текущий скан
+      {% if latest_session %}
+        · {{ latest_session.started_at.strftime("%d.%m.%Y %H:%M:%S") }} UTC
+      {% else %}
+        · данных пока нет
+      {% endif %}
+    </div>
   </div>
   <span class="badge text-bg-info">Backend rendering</span>
 </div>
@@ -22,10 +29,18 @@
 <div class="row g-4">
   <div class="col-lg-7">
     <div class="section">
-      <h2 class="h5">Последние сети</h2>
+      <h2 class="h5">Точки текущего скана</h2>
       <div class="table-responsive">
         <table class="table table-hover align-middle">
-          <thead><tr><th>SSID</th><th>BSSID</th><th>RSSI</th><th>Статус</th></tr></thead>
+          <thead>
+            <tr>
+              <th>SSID</th>
+              <th>BSSID</th>
+              <th>RSSI</th>
+              <th>Статус</th>
+              <th></th>
+            </tr>
+          </thead>
           <tbody>
             {% for item in latest_results %}
               <tr>
@@ -33,9 +48,22 @@
                 <td><code>{{ item.bssid }}</code></td>
                 <td>{{ item.rssi }} dBm</td>
                 <td><span class="badge threat-{{ item.threat_level|lower }}">{{ item.threat_level }}</span></td>
+                <td class="text-end">
+                  {% if item.threat_level != "SAFE" and latest_session %}
+                    <form method="post" action="{{ url_for('trust_network') }}" class="d-inline">
+                      <input type="hidden" name="building_id" value="{{ latest_session.building_id }}">
+                      <input type="hidden" name="ssid" value="{{ item.ssid }}">
+                      <input type="hidden" name="bssid" value="{{ item.bssid }}">
+                      <input type="hidden" name="encryption_type" value="{{ item.encryption_type }}">
+                      <button class="btn btn-outline-success btn-sm" type="submit">Доверенная</button>
+                    </form>
+                  {% else %}
+                    <span class="text-secondary small">OK</span>
+                  {% endif %}
+                </td>
               </tr>
             {% else %}
-              <tr><td colspan="4" class="text-secondary">Данных сканирования пока нет</td></tr>
+              <tr><td colspan="5" class="text-secondary">Данных сканирования пока нет</td></tr>
             {% endfor %}
           </tbody>
         </table>
@@ -44,14 +72,23 @@
   </div>
   <div class="col-lg-5">
     <div class="section">
-      <h2 class="h5">Угрозы</h2>
+      <h2 class="h5">Активные угрозы</h2>
       {% for threat in threats %}
         <div class="threat-row">
           <div>
             <div class="fw-semibold">{{ threat.threat_type }}</div>
-            <div class="text-secondary small">{{ threat.building.name }} · {{ threat.scan_result.ssid }}</div>
+            <div class="text-secondary small">{{ threat.building.name }} · {{ threat.ssid }} · <code>{{ threat.bssid }}</code></div>
           </div>
-          <span class="badge text-bg-danger">{{ threat.severity }}</span>
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge text-bg-danger">{{ threat.severity }}</span>
+            <form method="post" action="{{ url_for('trust_network') }}">
+              <input type="hidden" name="building_id" value="{{ threat.building_id }}">
+              <input type="hidden" name="ssid" value="{{ threat.ssid }}">
+              <input type="hidden" name="bssid" value="{{ threat.bssid }}">
+              <input type="hidden" name="encryption_type" value="{{ threat.scan_result.encryption_type if threat.scan_result else 'WPA2' }}">
+              <button class="btn btn-outline-success btn-sm" type="submit">Доверенная</button>
+            </form>
+          </div>
         </div>
       {% else %}
         <div class="text-secondary">Новых угроз нет</div>

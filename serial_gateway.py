@@ -138,6 +138,10 @@ def main():
 
         try:
             with serial.Serial(active_port, active_baudrate, timeout=0.5) as port:
+                # CH340/ESP8266: keep DTR/RTS low so the board is not held in reset
+                port.dtr = False
+                port.rts = False
+                time.sleep(0.3)
                 port.reset_input_buffer()
                 last_config_check = time.monotonic()
 

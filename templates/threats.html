@@ -8,7 +8,8 @@
       {% for threat in threats %}
         <tr>
           <td>{{ threat.threat_type }}</td><td><span class="badge text-bg-danger">{{ threat.severity }}</span></td><td>{{ threat.building.name }}</td>
-          <td>{{ threat.scan_result.ssid }}</td><td><code>{{ threat.scan_result.bssid }}</code></td>
+          <td>{{ threat.ssid or (threat.scan_result.ssid if threat.scan_result else "") }}</td>
+          <td><code>{{ threat.bssid or (threat.scan_result.bssid if threat.scan_result else "") }}</code></td>
           <td>
             <form class="d-flex gap-2" method="post">
               <input type="hidden" name="threat_id" value="{{ threat.id }}">

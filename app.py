@@ -86,12 +86,15 @@ class Threat(db.Model):
     __tablename__ = "threats"
 
     id = db.Column(db.Integer, primary_key=True)
-    scan_result_id = db.Column(db.BigInteger, db.ForeignKey("scan_results.id"), nullable=False)
+    scan_result_id = db.Column(db.BigInteger, db.ForeignKey("scan_results.id"), nullable=True)
     building_id = db.Column(db.Integer, db.ForeignKey("buildings.id"), nullable=False)
+    ssid = db.Column(db.String(120), nullable=False, default="")
+    bssid = db.Column(db.String(20), nullable=False, default="")
     threat_type = db.Column(db.String(40), nullable=False)
     severity = db.Column(db.String(30), nullable=False)
     status = db.Column(db.String(30), nullable=False, default="new")
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
     scan_result = db.relationship("ScanResult", backref="threat")
     building = db.relationship("Building")
 
@@ -204,6 +207,77 @@ def analyze_network(building_id, ssid, bssid, encryption_type):
     return "WARNING", ("UNKNOWN_DEVICE", "LOW")
 
 
+def find_active_threat(building_id, bssid):
+    return (
+        Threat.query.filter_by(building_id=building_id, bssid=normalize_bssid(bssid))
+        .filter(Threat.status != "resolved")
+        .first()
+    )
+
+
+def upsert_threat(building_id, scan_result_id, ssid, bssid, threat_type, severity):
+    """Create or refresh one active threat per building+BSSID (no duplicates)."""
+    bssid = normalize_bssid(bssid)
+    existing = find_active_threat(building_id, bssid)
+    now = datetime.now(timezone.utc)
+    if existing:
+        existing.scan_result_id = scan_result_id
+        existing.ssid = ssid
+        existing.threat_type = threat_type
+        existing.severity = severity
+        existing.updated_at = now
+        return False
+
+    db.session.add(
+        Threat(
+            scan_result_id=scan_result_id,
+            building_id=building_id,
+            ssid=ssid,
+            bssid=bssid,
+            threat_type=threat_type,
+            severity=severity,
+            updated_at=now,
+        )
+    )
+    return True
+
+
+def replace_device_scan_snapshot(device_id, keep_session_id):
+    """Keep only the latest scan session/results for a device; threats stay in history."""
+    old_sessions = ScanSession.query.filter(
+        ScanSession.device_id == device_id,
+        ScanSession.id != keep_session_id,
+    ).all()
+    if not old_sessions:
+        return
+
+    old_session_ids = [item.id for item in old_sessions]
+    old_result_ids = [
+        item.id for item in ScanResult.query.filter(ScanResult.session_id.in_(old_session_ids)).all()
+    ]
+    if old_result_ids:
+        Threat.query.filter(Threat.scan_result_id.in_(old_result_ids)).update(
+            {Threat.scan_result_id: None},
+            synchronize_session=False,
+        )
+        ScanResult.query.filter(ScanResult.id.in_(old_result_ids)).delete(synchronize_session=False)
+    ScanSession.query.filter(ScanSession.id.in_(old_session_ids)).delete(synchronize_session=False)
+
+
+def resolve_threats_for_network(building_id, bssid):
+    bssid = normalize_bssid(bssid)
+    threats = (
+        Threat.query.filter_by(building_id=building_id, bssid=bssid)
+        .filter(Threat.status != "resolved")
+        .all()
+    )
+    now = datetime.now(timezone.utc)
+    for threat in threats:
+        threat.status = "resolved"
+        threat.updated_at = now
+    return len(threats)
+
+
 def register_routes(app):
     @app.context_processor
     def inject_user():
@@ -234,9 +308,58 @@ def register_routes(app):
             "trusted": TrustedNetwork.query.count(),
             "threats": Threat.query.filter(Threat.status != "resolved").count(),
         }
-        latest_results = ScanResult.query.order_by(ScanResult.scan_time.desc()).limit(8).all()
-        threats = Threat.query.order_by(Threat.created_at.desc()).limit(8).all()
-        return render_template("dashboard.html", stats=stats, latest_results=latest_results, threats=threats)
+        latest_session = ScanSession.query.order_by(ScanSession.started_at.desc()).first()
+        latest_results = []
+        if latest_session:
+            latest_results = (
+                ScanResult.query.filter_by(session_id=latest_session.id)
+                .order_by(ScanResult.rssi.desc())
+                .all()
+            )
+        threats = (
+            Threat.query.filter(Threat.status != "resolved")
+            .order_by(Threat.updated_at.desc())
+            .limit(12)
+            .all()
+        )
+        return render_template(
+            "dashboard.html",
+            stats=stats,
+            latest_results=latest_results,
+            latest_session=latest_session,
+            threats=threats,
+        )
+
+    @app.route("/trust-network", methods=["POST"])
+    @login_required
+    def trust_network():
+        building_id = request.form.get("building_id", type=int)
+        ssid = (request.form.get("ssid") or "<hidden>").strip()
+        bssid = normalize_bssid(request.form.get("bssid"))
+        encryption_type = (request.form.get("encryption_type") or "WPA2").strip() or "WPA2"
+
+        if not building_id or not bssid:
+            flash("Не удалось добавить сеть в доверенные", "danger")
+            return redirect(url_for("dashboard"))
+
+        existing = TrustedNetwork.query.filter_by(building_id=building_id, bssid=bssid).first()
+        if existing:
+            existing.ssid = ssid
+            existing.encryption_type = encryption_type
+        else:
+            db.session.add(
+                TrustedNetwork(
+                    building_id=building_id,
+                    ssid=ssid,
+                    bssid=bssid,
+                    encryption_type=encryption_type,
+                )
+            )
+
+        resolved = resolve_threats_for_network(building_id, bssid)
+        db.session.commit()
+        flash(f"Сеть {ssid} добавлена в доверенные" + (f", закрыто угроз: {resolved}" if resolved else ""), "success")
+        return redirect(url_for("dashboard"))
 
     @app.route("/buildings", methods=["GET", "POST"])
     @login_required
@@ -395,9 +518,16 @@ def register_routes(app):
         db.session.flush()
 
         created_threats = 0
+        updated_threats = 0
+        seen_bssids = set()
+
         for network in payload.get("networks", []):
             ssid = network.get("ssid") or "<hidden>"
             bssid = normalize_bssid(network.get("bssid"))
+            if not bssid or bssid in seen_bssids:
+                continue
+            seen_bssids.add(bssid)
+
             encryption_type = network.get("encryption_type", "UNKNOWN")
             threat_level, threat_data = analyze_network(device.building_id, ssid, bssid, encryption_type)
             result = ScanResult(
@@ -410,19 +540,34 @@ def register_routes(app):
             )
             db.session.add(result)
             db.session.flush()
-            if threat_data:
-                db.session.add(
-                    Threat(
-                        scan_result_id=result.id,
-                        building_id=device.building_id,
-                        threat_type=threat_data[0],
-                        severity=threat_data[1],
-                    )
-                )
-                created_threats += 1
 
+            if threat_data:
+                created = upsert_threat(
+                    device.building_id,
+                    result.id,
+                    ssid,
+                    bssid,
+                    threat_data[0],
+                    threat_data[1],
+                )
+                if created:
+                    created_threats += 1
+                else:
+                    updated_threats += 1
+            else:
+                # Trusted / safe again — close any leftover open threat for this BSSID
+                resolve_threats_for_network(device.building_id, bssid)
+
+        replace_device_scan_snapshot(device.id, scan_session.id)
         db.session.commit()
-        return jsonify({"session_id": scan_session.id, "threats": created_threats})
+        return jsonify(
+            {
+                "session_id": scan_session.id,
+                "networks": len(seen_bssids),
+                "threats_created": created_threats,
+                "threats_updated": updated_threats,
+            }
+        )
 
 
 app = create_app()
